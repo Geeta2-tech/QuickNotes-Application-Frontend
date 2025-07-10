@@ -1,0 +1,37 @@
+name: CI/CD Pipeline
+
+# Trigger this workflow only when pushing to `main`
+on:
+  push:
+    branches:
+      - main  # Runs only when code is pushed to the `main` branch
+
+  pull_request:
+    branches:
+      - main  # Runs on PRs that target the `main` branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # This runs on the latest version of Ubuntu
+
+    steps:
+    # Checkout the code from the repository
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    #Run super-linter to check code quality
+    - name: Run Super-Linter
+      uses: github/super-linter@v4
+
+
+    # Install dependencies (if applicable, for a Node.js app)
+    - name: Install dependencies
+      run: |
+        npm install
+
+    # Run the build command (Only for the `main` branch)
+    - name: Build the project
+      run: |
+        npm run build  # Replace with your build command
+
+    
