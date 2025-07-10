@@ -26,10 +26,6 @@ jobs:
       run: |
         npm install
 
-    - name: Run the dev command with verbose output
-      run: |
-        npm run dev  # Run dev with more detailed logs for debugging
-
     - name: Run the build command
       run: |
         npm run build  # Use npm run build for production build
