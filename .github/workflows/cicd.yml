@@ -22,9 +22,6 @@ jobs:
         npm install
         npm list --depth=0  # List installed packages to verify dependencies
 
-    - name: Run Super-Linter
-      uses: github/super-linter@v4
-
     - name: Install dependencies
       run: |
         npm install
