@@ -4,6 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import { FaUserCircle } from 'react-icons/fa';
 import axios from 'axios';
+import Masonry from "react-masonry-css";
+import EditCard from '../components/EditCard';
+import CardForm from '../components/Card';
+
+
+const masonryBreakpoints = {
+    default: 6,
+    1024: 2,
+    768: 2,
+};
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -13,29 +23,91 @@ const Dashboard = () => {
     const [content, setContent] = useState('');
     const [color, setColor] = useState('#ffffff');
     const token = Cookies.get('token');
+    const [updateForm, setUpdateForm] = useState({ show: false, card: null });
+    const [shouldFetch, setShouldFetch] = useState(false);
 
+    const api = axios.create({
+        baseURL: 'http://localhost:3000/api',
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    // In Dashboard.js
     useEffect(() => {
         const token = Cookies.get('token');
         if (!token) {
             toast.error('Please login to access the dashboard');
             navigate('/login');
+            return;
         }
-    }, []);
 
-    const handleAddCard = () => {
+        const fetchNotes = async () => {
+            try {
+                const res = await api.get(`/notes/get-all-by-uid`);
+                setCards(res.data);
+            } catch (error) {
+                toast.error('Failed to load notes');
+            } finally {
+                // Reset shouldFetch after fetching
+                setShouldFetch(false);
+            }
+        };
+
+        if (shouldFetch) {
+            fetchNotes();
+        } else {
+            // Initial fetch
+            fetchNotes();
+        }
+    }, [shouldFetch]); // Only run when shouldFetch changes
+
+    const handleAddCard = async () => {
         if (!title || !content) {
             toast.error('Please fill in both title and content');
             return;
         }
-        const newCard = { title, content, color };
-        setCards([...cards, newCard]);
-        setTitle('');
-        setContent('');
-        setColor('#ffffff');
-        setShowForm(false);
 
+        try {
+            const res = await api.post('/notes/create', {
+                title,
+                content,
+                color,
+                userId: token,
+            });
+
+            setCards((prevCards) => [...prevCards, res.data.note]);
+            setTitle('');  // Reset title
+            setContent('');  // Reset content
+            setColor('#ffffff');  // Reset color or set to null
+            setShowForm(false);
+            toast.success('Note created successfully');
+            setShouldFetch((prev) => !prev);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to create note');
+        }
     };
 
+
+    const handleDeleteNote = async (id) => {
+        try {
+            const response = await axios.delete(`http://localhost:3000/api/notes/delete?id=${id}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            if (response.status === 200) {
+                setCards(cards.filter((card) => card.id !== id));
+                toast.success('Note deleted successfully');
+            } else {
+                toast.error('Failed to delete note');
+            }
+        } catch (error) {
+            console.error('Error deleting note:', error);
+            toast.error('Error deleting note');
+        }
+    };
 
     const handleLogout = async () => {
         const confirmLogout = window.confirm("Are you sure you want to logout?");
@@ -45,11 +117,11 @@ const Dashboard = () => {
             const res = await axios.post('http://localhost:3000/api/users/logout', {}, {
                 headers: {
                     Authorization: `Bearer ${token}`
-                } //  this includes cookies
+                }
             });
 
             if (res.status === 200) {
-                Cookies.remove('token'); // remove manually stored token (if any)
+                Cookies.remove('token');
                 toast.success('Logged out successfully');
                 navigate('/login');
             } else {
@@ -61,14 +133,10 @@ const Dashboard = () => {
         }
     };
 
-
     return (
         <div className="min-h-screen p-6 bg-blue-100 relative">
             <div className="absolute top-6 right-6 group flex flex-col items-end">
-                {/* User Icon */}
                 <FaUserCircle className="text-4xl text-gray-800 cursor-pointer" />
-
-                {/* Logout Button on Hover */}
                 <button
                     onClick={handleLogout}
                     className="mt-2 bg-red-400 text-white text-sm px-3 py-1 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -76,95 +144,123 @@ const Dashboard = () => {
                     Logout
                 </button>
             </div>
-
-
             <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">Let's create <span className="text-yellow-500">Quick</span> Notes</h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
-                {cards.length === 0 ? (
-                    <div className="col-span-full flex items-center justify-center min-h-[200px]">
-                        <span className="text-xl text-gray-500 font-semibold">No notes created yet...</span>
+            <div className="p-4">
+                {Array.isArray(cards) && cards.length === 0 ? (
+                    <div className="flex items-center justify-center min-h-[200px]">
+                        <span className="text-xl text-gray-500 font-semibold">
+                            No notes created yet...
+                        </span>
                     </div>
                 ) : (
-                    cards.map((card, index) => (
-                        <div
-                            key={index}
-                            className="p-4 rounded shadow-md text-black"
-                            style={{
-                                backgroundColor: card.color,
-                                minHeight: '100px',
-                                whiteSpace: 'pre-wrap',
-                                wordWrap: 'break-word',
-                            }}
-                        >
-                            <h2 className="text-xl font-bold mb-2">{card.title}</h2>
-                            <p className="text-sm">{card.content}</p>
-                        </div>
-                    ))
+                    <Masonry
+                        breakpointCols={masonryBreakpoints}
+                        className="flex gap-6 w-auto"
+                        columnClassName="flex flex-col gap-6"
+                    >
+                        {cards.map((card, index) => {
+                            if (!card || typeof card !== "object") return null;
+                            return (
+                                <div key={index} className="relative group">
+                                    {/* Delete button - hidden by default, visible on hover */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteNote(card.id);
+                                        }}
+                                        className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                        title="Delete note"
+                                    >
+                                        ×
+                                    </button>
+
+                                    {/* Card content */}
+                                    <div
+                                        className="relative flex flex-col justify-between p-4 rounded-2xl shadow-md text-black transition-all duration-300 hover:shadow-lg"
+                                        style={{
+                                            backgroundColor: card?.color || "#ffffff",
+                                            minHeight: "100px",
+                                            maxHeight: "400px",
+                                            overflow: "hidden",
+                                            border: "1px solid #ccc",
+                                            borderRadius: "12px",
+                                            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                                            padding: "16px",
+                                            margin: "8px",
+                                            fontSize: "14px",
+                                            whiteSpace: "pre-wrap",
+                                            wordWrap: "break-word",
+                                        }}
+                                        onClick={() => setUpdateForm({ show: true, card: card })}
+                                    >
+                                        <h2 className="text-xl font-bold mb-2">{card.title || ""}</h2>
+                                        <div
+                                            className="text-sm"
+                                            style={{
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                display: "-webkit-box",
+                                                WebkitBoxOrient: "vertical",
+                                                WebkitLineClamp: 10,
+                                            }}
+                                        >
+                                            <div
+                                                className="text-sm"
+                                                style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}
+                                                dangerouslySetInnerHTML={{ __html: card.content || "" }}
+                                            />
+
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </Masonry>
                 )}
             </div>
 
-            {/* floating button */}
             <button
-                onClick={() => setShowForm(true)}
-                className="fixed bottom-10 right-10 bg-purple-200 text-black px-5 py-3 rounded-full shadow-lg hover:bg-gray-300 transition"
+                onClick={() => {
+                    setTitle('');  // Reset title
+                    setContent('');  // Reset content
+                    setColor('#ffffff');  // Reset color to default or null
+                    setShowForm(true);
+                }}
+                className="fixed bottom-10 right-10 bg-gradient-to-r from-purple-400 to-pink-400 text-black px-5 py-3 rounded-full shadow-lg hover:bg-gray-300 transition"
             >
                 + Create a Note
             </button>
 
-            {/* Card Form Modal */}
+
             {showForm && (
-                <div className="fixed inset-0 bg-blue-100/60 flex items-center justify-center z-50">
-                    <div className="bg-orange-100  rounded-lg p-6 w-full max-w-md shadow-2xl relative">
-                        <button
-                            className="absolute top-2 right-3 text-xl text-gray-600 hover:text-black"
-                            onClick={() => setShowForm(false)}
-                        >
-                            ✕
-                        </button>
-
-                        <div className="flex justify-center">
-                            <input
-                                type="text"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                placeholder="Add title"
-                                className="w-64 mt-3 mb-3 p-3 border border-gray-300 rounded-full text-center shadow"
-                            />
-                        </div>
-
-                        <textarea
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                            placeholder="Write your note here..."
-                            className="w-full mt-5 mb-5 p-2 border border-gray-300 rounded-lg resize-none"
-                            rows={4}
-                        />
-                        <div className="mb-4 flex items-center justify-between gap-4">
-                            <div>
-                                <label className="font-medium whitespace-nowrap">Select Note Color:</label>
-                                <input
-                                    type="color"
-                                    value={color}
-                                    onChange={(e) => setColor(e.target.value)}
-                                    className="w-10 h-5 p-0 border-none bg-gray-300 rounded "
-                                />
-                            </div>
-                            <button
-                                onClick={handleAddCard}
-                                className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-400 transition"
-                            >
-                                Add Note
-                            </button>
-                        </div>
-
-
-                    </div>
-                </div>
+                <CardForm
+                    title={title}
+                    setTitle={setTitle}
+                    content={content}
+                    setContent={setContent}
+                    color={color}
+                    setColor={setColor}
+                    onAddCard={handleAddCard}
+                    onClose={() => setShowForm(false)}
+                />
+            )}
+            {updateForm.show && (
+                <EditCard
+                    title={updateForm.card.title}
+                    setTitle={setTitle}
+                    content={updateForm.card.content}
+                    setContent={setContent}
+                    color={updateForm.card.color}
+                    setColor={setColor}
+                    onClose={() => setUpdateForm({ show: false, card: null })}
+                    cardId={updateForm.card.id}
+                    token={token}
+                    setShouldFetch={setShouldFetch}
+                />
             )}
         </div>
     );
 };
-
 
 export default Dashboard;
