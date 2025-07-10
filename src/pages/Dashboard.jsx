@@ -8,7 +8,7 @@ import Masonry from "react-masonry-css";
 import EditCard from '../components/EditCard';
 import CardForm from '../components/Card';
 
-
+// Masonry layout breakpoints
 const masonryBreakpoints = {
     default: 6,
     1024: 2,
@@ -33,9 +33,8 @@ const Dashboard = () => {
         },
     });
 
-    // In Dashboard.js
+    // Fetch notes on component mount and when `shouldFetch` changes
     useEffect(() => {
-        const token = Cookies.get('token');
         if (!token) {
             toast.error('Please login to access the dashboard');
             navigate('/login');
@@ -49,19 +48,19 @@ const Dashboard = () => {
             } catch (error) {
                 toast.error('Failed to load notes');
             } finally {
-                // Reset shouldFetch after fetching
-                setShouldFetch(false);
+                setShouldFetch(false); // Reset `shouldFetch` after fetching
             }
         };
 
+        // Initial fetch or fetch when `shouldFetch` changes
         if (shouldFetch) {
             fetchNotes();
         } else {
-            // Initial fetch
             fetchNotes();
         }
-    }, [shouldFetch]); // Only run when shouldFetch changes
+    }, [shouldFetch, token, navigate, api]); // Dependencies array includes relevant variables
 
+    // Handle creating a new card
     const handleAddCard = async () => {
         if (!title || !content) {
             toast.error('Please fill in both title and content');
@@ -77,9 +76,9 @@ const Dashboard = () => {
             });
 
             setCards((prevCards) => [...prevCards, res.data.note]);
-            setTitle('');  // Reset title
-            setContent('');  // Reset content
-            setColor('#ffffff');  // Reset color or set to null
+            setTitle('');
+            setContent('');
+            setColor('#ffffff');
             setShowForm(false);
             toast.success('Note created successfully');
             setShouldFetch((prev) => !prev);
@@ -88,13 +87,11 @@ const Dashboard = () => {
         }
     };
 
-
+    // Handle deleting a note
     const handleDeleteNote = async (id) => {
         try {
             const response = await axios.delete(`http://localhost:3000/api/notes/delete?id=${id}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
+                headers: { Authorization: `Bearer ${token}` },
             });
 
             if (response.status === 200) {
@@ -104,20 +101,18 @@ const Dashboard = () => {
                 toast.error('Failed to delete note');
             }
         } catch (error) {
-            console.error('Error deleting note:', error);
             toast.error('Error deleting note');
         }
     };
 
+    // Handle user logout
     const handleLogout = async () => {
         const confirmLogout = window.confirm("Are you sure you want to logout?");
         if (!confirmLogout) return;
 
         try {
             const res = await axios.post('http://localhost:3000/api/users/logout', {}, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
+                headers: { Authorization: `Bearer ${token}` },
             });
 
             if (res.status === 200) {
@@ -128,13 +123,13 @@ const Dashboard = () => {
                 toast.error('Logout failed');
             }
         } catch (error) {
-            console.error(error);
             toast.error(error.response?.data?.message || 'Something went wrong');
         }
     };
 
     return (
         <div className="min-h-screen p-6 bg-blue-100 relative">
+            {/* User Profile and Logout Button */}
             <div className="absolute top-6 right-6 group flex flex-col items-end">
                 <FaUserCircle className="text-4xl text-gray-800 cursor-pointer" />
                 <button
@@ -144,8 +139,13 @@ const Dashboard = () => {
                     Logout
                 </button>
             </div>
-            <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">Let's create <span className="text-yellow-500">Quick</span> Notes</h1>
 
+            {/* Dashboard Title */}
+            <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
+                Let's create <span className="text-yellow-500">Quick</span> Notes
+            </h1>
+
+            {/* Displaying Notes */}
             <div className="p-4">
                 {Array.isArray(cards) && cards.length === 0 ? (
                     <div className="flex items-center justify-center min-h-[200px]">
@@ -163,7 +163,7 @@ const Dashboard = () => {
                             if (!card || typeof card !== "object") return null;
                             return (
                                 <div key={index} className="relative group">
-                                    {/* Delete button - hidden by default, visible on hover */}
+                                    {/* Delete Button */}
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -175,7 +175,7 @@ const Dashboard = () => {
                                         ×
                                     </button>
 
-                                    {/* Card content */}
+                                    {/* Card Content */}
                                     <div
                                         className="relative flex flex-col justify-between p-4 rounded-2xl shadow-md text-black transition-all duration-300 hover:shadow-lg"
                                         style={{
@@ -210,7 +210,6 @@ const Dashboard = () => {
                                                 style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}
                                                 dangerouslySetInnerHTML={{ __html: card.content || "" }}
                                             />
-
                                         </div>
                                     </div>
                                 </div>
@@ -220,11 +219,12 @@ const Dashboard = () => {
                 )}
             </div>
 
+            {/* Button to Create a Note */}
             <button
                 onClick={() => {
-                    setTitle('');  // Reset title
-                    setContent('');  // Reset content
-                    setColor('#ffffff');  // Reset color to default or null
+                    setTitle('');
+                    setContent('');
+                    setColor('#ffffff');
                     setShowForm(true);
                 }}
                 className="fixed bottom-10 right-10 bg-gradient-to-r from-purple-400 to-pink-400 text-black px-5 py-3 rounded-full shadow-lg hover:bg-gray-300 transition"
@@ -232,7 +232,7 @@ const Dashboard = () => {
                 + Create a Note
             </button>
 
-
+            {/* Card Creation Form */}
             {showForm && (
                 <CardForm
                     title={title}
@@ -245,6 +245,8 @@ const Dashboard = () => {
                     onClose={() => setShowForm(false)}
                 />
             )}
+
+            {/* Edit Card Form */}
             {updateForm.show && (
                 <EditCard
                     title={updateForm.card.title}

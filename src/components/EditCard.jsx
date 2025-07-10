@@ -15,7 +15,7 @@ const EditCard = ({
   onClose,
   cardId,
   token,
-  setShouldFetch, // New prop to update the state after update
+  setShouldFetch, // New prop to trigger re-fetch after update
 }) => {
   // Local state to manage the form inputs
   const [localTitle, setLocalTitle] = useState(initialTitle || '');
@@ -38,6 +38,7 @@ const EditCard = ({
     },
   });
 
+  // Handle card update submission
   const handleUpdate = async () => {
     if (!localTitle.trim() || !localContent.trim()) {
       toast.error('Please fill in both title and content');
@@ -50,6 +51,7 @@ const EditCard = ({
     }
 
     try {
+      // Send PUT request to update the note
       await api.put(`/notes/update?id=${cardId}`, {
         title: localTitle.trim(),
         content: localContent.trim(),
@@ -63,12 +65,13 @@ const EditCard = ({
 
       toast.success('Note updated successfully');
 
-      // Toggle shouldFetch to trigger re-fetch
+      // Trigger re-fetch by toggling shouldFetch
       setShouldFetch(prev => !prev);
 
       // Close the form
       onClose();
     } catch (error) {
+      // Handle errors
       console.error('Error updating note:', error);
       if (error.response) {
         toast.error(error.response.data?.message || `Server error: ${error.response.status}`);
@@ -86,6 +89,7 @@ const EditCard = ({
         className="rounded-lg p-6 w-full max-w-md shadow-2xl relative"
         style={{ backgroundColor: localColor || '#fef2f2' }}
       >
+        {/* Close Button */}
         <button
           className="absolute top-2 right-3 text-xl text-gray-600 hover:text-black"
           onClick={onClose}
@@ -93,6 +97,7 @@ const EditCard = ({
           ✕
         </button>
 
+        {/* Title Input */}
         <div className="flex justify-center">
           <input
             type="text"
@@ -103,14 +108,12 @@ const EditCard = ({
           />
         </div>
 
-        {/* ReactQuill for Markdown-like editing */}
+        {/* ReactQuill Editor */}
         <div className="w-full mt-5 mb-5">
           <ReactQuill
             theme="snow"
             value={localContent}
-            onChange={(newValue) => {
-              setLocalContent(newValue);
-            }}
+            onChange={(newValue) => setLocalContent(newValue)}
             placeholder="Write your note here..."
             className="w-full border border-gray-300 rounded-lg"
             style={{
@@ -122,7 +125,6 @@ const EditCard = ({
                 [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                 ['bold', 'italic', 'underline', 'strike'],
                 ['link'],
-
                 [{ 'color': [] }, { 'background': [] }],
                 ['image'],
               ],
@@ -130,11 +132,12 @@ const EditCard = ({
           />
         </div>
 
+        {/* Color Picker and Update Button */}
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
             <label className="font-medium mb-1 block">Select Note Color:</label>
             <div className="flex gap-2 flex-wrap items-center">
-              {/* Color Picker with Pipette */}
+              {/* Color Picker */}
               <div className="relative w-6 h-6 mb-2">
                 <input
                   type="color"
@@ -144,6 +147,8 @@ const EditCard = ({
                 />
                 <Pipette className="absolute top-1/2 left-1/2 w-3.5 h-3.5 text-gray-800 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
+
+              {/* Color Option Buttons */}
               {[
                 '#ffffff', '#f28b82', '#fbbc04', '#fff475',
                 '#ccff90', '#a7ffeb', '#cbf0f8', '#aecbfa', '#d7aefb'
@@ -158,6 +163,7 @@ const EditCard = ({
             </div>
           </div>
 
+          {/* Update Note Button */}
           <button
             onClick={handleUpdate}
             className="bg-gray-700 text-white px-4 py-1 mt-5 rounded hover:bg-gray-400 transition"

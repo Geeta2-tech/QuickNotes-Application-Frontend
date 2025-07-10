@@ -18,25 +18,26 @@ const CardForm = ({
   // Set default color only on initial mount
   useEffect(() => {
     if (!color) {
-      setColor('#ffffff');
+      setColor('#ffffff'); // Set default color if not provided
     }
   }, []); // Empty dependency array means this runs only once on mount
 
-  // Sync the Quill editor value with content
-  
-
+  // Handle form submission
   const handleSubmit = () => {
     if (!title.trim() || !content.trim()) {
       toast.error('Please fill in both title and content');
       return;
     }
-    onAddCard();
+    onAddCard(); // Call onAddCard when form is valid
   };
 
   return (
     <div className="fixed inset-0 bg-blue-100/60 flex items-center justify-center z-50">
-      <div className="rounded-lg p-6 w-full max-w-md shadow-2xl relative"
-        style={{ backgroundColor: color || '#fef2f2' }}>
+      <div 
+        className="rounded-lg p-6 w-full max-w-md shadow-2xl relative"
+        style={{ backgroundColor: color || '#fef2f2' }}
+      >
+        {/* Close Button */}
         <button
           className="absolute top-2 right-3 text-xl text-gray-600 hover:text-black"
           onClick={onClose}
@@ -44,6 +45,7 @@ const CardForm = ({
           ✕
         </button>
 
+        {/* Title Input */}
         <div className="flex justify-center">
           <input
             type="text"
@@ -54,37 +56,39 @@ const CardForm = ({
           />
         </div>
 
+        {/* Quill Editor */}
         <div className="w-full mt-5 mb-5">
-  <ReactQuill
-    theme="snow"
-    value={value}
-    onChange={(newValue) => {
-      setValue(newValue);
-      setContent(newValue);
-    }}
-    placeholder="Write your note here..."
-    className="w-full border border-gray-300 rounded-lg"
-    style={{
-      maxHeight: '300px',  // Adjust height as needed
-      overflowY: 'auto',  // Enable vertical scrolling
-    }}
-    modules={{
-      toolbar: [
-        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        ['bold', 'italic', 'underline', 'strike'],
-        ['link'],
-        [{ 'color': [] }, { 'background': [] }],
-        ['image'],
-      ],
-    }}
-  />
-</div>
+          <ReactQuill
+            theme="snow"
+            value={value}
+            onChange={(newValue) => {
+              setValue(newValue);  // Update local value
+              setContent(newValue); // Sync with parent content
+            }}
+            placeholder="Write your note here..."
+            className="w-full border border-gray-300 rounded-lg"
+            style={{
+              maxHeight: '300px',  // Adjust height as needed
+              overflowY: 'auto',  // Enable vertical scrolling
+            }}
+            modules={{
+              toolbar: [
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                ['bold', 'italic', 'underline', 'strike'],
+                ['link'],
+                [{ 'color': [] }, { 'background': [] }],
+                ['image'],
+              ],
+            }}
+          />
+        </div>
 
-
+        {/* Color Picker */}
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
             <label className="font-medium mb-1 block">Select Note Color:</label>
             <div className="flex gap-2 flex-wrap items-center">
+              {/* Color Input */}
               <div className="relative w-6 h-6 mb-2">
                 <input
                   type="color"
@@ -95,6 +99,7 @@ const CardForm = ({
                 <Pipette className="absolute top-1/2 left-1/2 w-3.5 h-3.5 text-gray-800 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
 
+              {/* Color Options */}
               {[
                 '#ffffff', '#f28b82', '#fbbc04', '#fff475',
                 '#ccff90', '#a7ffeb', '#cbf0f8', '#aecbfa', '#d7aefb'
@@ -102,13 +107,14 @@ const CardForm = ({
                 <button
                   key={clr}
                   onClick={() => setColor(clr)}
-                  className={`w-2 h-2 p-2 rounded-full border-2 ${(color || '#ffffff') === clr ? 'border-black' : 'border-transparent'}`}
+                  className={`w-2 h-2 p-2 rounded-full border-2 ${color === clr ? 'border-black' : 'border-transparent'}`}
                   style={{ backgroundColor: clr }}
                 />
               ))}
             </div>
           </div>
 
+          {/* Submit Button */}
           <button
             onClick={handleSubmit}
             className="bg-gray-700 text-white px-4 py-1 mt-5 rounded hover:bg-gray-400 transition"
