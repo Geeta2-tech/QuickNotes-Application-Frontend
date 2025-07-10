@@ -30,7 +30,7 @@ jobs:
         npm install
 
     # Run the build command (Only for the `main` branch)
-    - name: Build the project
+    - name: Run the dev command
       run: |
         npm run dev  # Replace with your build command
 
